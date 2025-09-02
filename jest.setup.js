@@ -1,5 +1,13 @@
 const crypto = require('crypto');
 
+const originalWarn = console.warn;
+console.warn = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('bigint: Failed to load bindings')) {
+        return;
+    }
+    originalWarn(...args);
+};
+
 Object.defineProperty(global, 'crypto', {
   value: {
     getRandomValues: arr => crypto.randomFillSync(arr),
