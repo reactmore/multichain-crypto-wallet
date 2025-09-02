@@ -134,13 +134,35 @@ const getBalance = async (args: BalancePayload): Promise<IResponse> => {
   }
 };
 
+const waitForTransaction = async (
+  connection: solanaWeb3.Connection,
+  signature: string,
+  retries = 15,
+  delay = 2000
+) => {
+  for (let i = 0; i < retries; i++) {
+    const resp = await connection.getSignatureStatuses([signature]);
+    const status = resp.value[0];
+
+    if (status?.confirmationStatus === "finalized") {
+      return await connection.getTransaction(signature, {
+        maxSupportedTransactionVersion: 0,
+      });
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  throw new Error("Transaction not found after waiting");
+};
+
 const transfer = async (args: TransferPayload): Promise<IResponse> => {
   const connection = getConnection(args.rpcUrl);
 
   try {
     const recipient = new solanaWeb3.PublicKey(args.recipientAddress);
-    let secretKey;
-    let signature;
+    let secretKey: Uint8Array;
+    let signature: string;
 
     if (args.privateKey.split(',').length > 1) {
       secretKey = new Uint8Array(args.privateKey.split(',') as any);
@@ -153,13 +175,12 @@ const transfer = async (args: TransferPayload): Promise<IResponse> => {
     });
 
     if (args.tokenAddress) {
-      // Get token mint
+      // SPL Token Transfer
       const mint = await getMint(
         connection,
         new solanaWeb3.PublicKey(args.tokenAddress)
       );
 
-      // Get the token account of the from address, and if it does not exist, create it
       const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         from,
@@ -167,7 +188,6 @@ const transfer = async (args: TransferPayload): Promise<IResponse> => {
         from.publicKey
       );
 
-      // Get the token account of the recipient address, and if it does not exist, create it
       const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         from,
@@ -184,6 +204,7 @@ const transfer = async (args: TransferPayload): Promise<IResponse> => {
         solanaWeb3.LAMPORTS_PER_SOL * args.amount
       );
     } else {
+      // Native SOL Transfer
       const transaction = new solanaWeb3.Transaction().add(
         solanaWeb3.SystemProgram.transfer({
           fromPubkey: from.publicKey,
@@ -199,17 +220,17 @@ const transfer = async (args: TransferPayload): Promise<IResponse> => {
       );
     }
 
-    const tx = await connection.getTransaction(signature, {
-      maxSupportedTransactionVersion: 0,
-    });
+    // wait transaction status before sending to response object
+    const tx = await waitForTransaction(connection, signature);
 
     return successResponse({
-      ...tx,
+      ...tx
     });
   } catch (error) {
     throw error;
   }
 };
+
 
 const getTransaction = async (
   args: GetTransactionPayload
