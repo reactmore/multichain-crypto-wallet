@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { TextEncoder, TextDecoder } = require('util');
+const fetch = require('node-fetch');
 
 // --------------------
 // Polyfill TextEncoder / TextDecoder
@@ -10,6 +11,7 @@ if (typeof global.TextEncoder === 'undefined') {
 if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
+global.fetch = fetch;
 
 // --------------------
 // Suppress bigint-buffer warning
@@ -40,6 +42,7 @@ Object.defineProperty(global, 'crypto', {
 try {
   const noble = require('@noble/hashes/utils');
   if (noble) {
+    noble.randomBytes = (length) => crypto.randomBytes(length);
     noble.randomBytes = (length) => crypto.randomBytes(length);
   }
 } catch (e) {
