@@ -25,16 +25,28 @@ import { BitgoUTXOLib } from '../libs/bitgoUtxoLib';
 const bip32 = BIP32Factory(ecc);
 const ECPair = ECPairFactory(ecc);
 
+const getPaymentFromPurpose = (purpose: string, pubkey: Buffer, network: any) => {
+  switch (purpose) {
+    case "44'":
+      return bitcoin.payments.p2pkh({ pubkey, network });
+    case "49'":
+      return bitcoin.payments.p2sh({
+        redeem: bitcoin.payments.p2wpkh({ pubkey, network }),
+        network,
+      });
+    case "84'":
+      return bitcoin.payments.p2wpkh({ pubkey, network });
+    default:
+      throw new Error(`Unsupported purpose: ${purpose}`);
+  }
+}
+
 const createWallet = ({
   network,
   derivationPath,
 }: CreateWalletPayload): IResponse => {
-  if (derivationPath) {
-    const purpose = derivationPath?.split('/')[1];
-    if (purpose !== "44'") {
-      throw new Error('Invalid derivation path');
-    }
-  }
+  let purpose = "";
+  if (derivationPath) purpose = derivationPath?.split('/')[1]
 
   const path = derivationPath || "m/44'/0'/0'/0/0";
   const mnemonic = bip39.generateMnemonic();
@@ -44,10 +56,8 @@ const createWallet = ({
   const child = node.derivePath(path);
   const actualNetwork = getNetwork(network);
 
-  const { address } = bitcoin.payments.p2pkh({
-    pubkey: child.publicKey,
-    network: actualNetwork,
-  });
+  const { address } = getPaymentFromPurpose(purpose, child.publicKey, actualNetwork);
+
 
   const privateKey = child.toWIF();
 
@@ -63,12 +73,8 @@ const generateWalletFromMnemonic = ({
   mnemonic,
   derivationPath,
 }: GenerateWalletFromMnemonicPayload): IResponse => {
-  if (derivationPath) {
-    const purpose = derivationPath?.split('/')[1];
-    if (purpose !== "44'") {
-      throw new Error('Invalid derivation path ');
-    }
-  }
+  let purpose = "";
+  if (derivationPath) purpose = derivationPath?.split('/')[1]
 
   const seed = bip39.mnemonicToSeedSync(mnemonic);
   const path = derivationPath || "m/44'/0'/0'/0/0";
@@ -77,10 +83,7 @@ const generateWalletFromMnemonic = ({
   const child = node.derivePath(path);
   const actualNetwork = getNetwork(network);
 
-  const { address } = bitcoin.payments.p2pkh({
-    pubkey: child.publicKey,
-    network: actualNetwork,
-  });
+  const { address } = getPaymentFromPurpose(purpose, child.publicKey, actualNetwork);
 
   const privateKey = child.toWIF();
 
@@ -216,8 +219,8 @@ function getNetwork(network: Network) {
   return network === 'bitcoin'
     ? bitcoin.networks.bitcoin
     : network === 'bitcoin-testnet'
-    ? bitcoin.networks.testnet
-    : bitcoin.networks.bitcoin;
+      ? bitcoin.networks.testnet
+      : bitcoin.networks.bitcoin;
 }
 
 function isTestnet(network: Network) {
