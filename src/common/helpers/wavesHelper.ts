@@ -215,8 +215,10 @@ function getChainIdWithCluster(cluster?: string) {
     : undefined;
 }
 
-function getChainIdWithAddress(address: string) {
-  return address.startsWith('3P') ? MAIN_NET_CHAIN_ID : TEST_NET_CHAIN_ID;
+function getChainIdWithAddress(addrOrCluster: string) {
+  if (addrOrCluster.startsWith("3N")) return TEST_NET_CHAIN_ID; // Testnet
+  if (addrOrCluster.startsWith("3P")) return MAIN_NET_CHAIN_ID; // Mainnet
+  return TEST_NET_CHAIN_ID; // fallback to testnet
 }
 
 export default {
