@@ -106,20 +106,21 @@ const getBalance = async (args: BalancePayload): Promise<IResponse> => {
   try {
     let balance;
     if (args.tokenAddress) {
+      const mintPubkey = new solanaWeb3.PublicKey(args.tokenAddress);
+      const mintInfo = await getMint(connection, mintPubkey);
       const account = await connection.getTokenAccountsByOwner(
         new solanaWeb3.PublicKey(args.address),
         {
-          mint: new solanaWeb3.PublicKey(args.tokenAddress),
+          mint: mintPubkey,
         }
       );
 
-      balance =
-        account.value.length > 0
-          ? ACCOUNT_LAYOUT.decode(account.value[0].account.data).amount
-          : 0;
+      const rawAmount = account.value.length > 0 ? ACCOUNT_LAYOUT.decode(account.value[0].account.data).amount : 0;
+
+      balance = rawAmount / Math.pow(10, mintInfo.decimals);
 
       return successResponse({
-        balance: balance / solanaWeb3.LAMPORTS_PER_SOL,
+        balance: balance,
       });
     }
 
