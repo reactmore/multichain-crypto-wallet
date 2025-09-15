@@ -2,7 +2,7 @@ import provider from '../utils/solana';
 import * as solanaWeb3 from '@solana/web3.js';
 import {
   getOrCreateAssociatedTokenAccount,
-  transfer as transferToken,
+  getAssociatedTokenAddress,
   getMint,
   createTransferInstruction
 } from '@solana/spl-token';
@@ -105,30 +105,28 @@ const getBalance = async (args: BalancePayload): Promise<IResponse> => {
 
   try {
     let balance;
+    const publicKey = new solanaWeb3.PublicKey(args.address);
     if (args.tokenAddress) {
-      const account = await connection.getTokenAccountsByOwner(
-        new solanaWeb3.PublicKey(args.address),
-        {
-          mint: new solanaWeb3.PublicKey(args.tokenAddress),
-        }
-      );
+      const mintPubkey = new solanaWeb3.PublicKey(args.tokenAddress);
+      // get token by account 
+      const tokenAccountAddress = await getAssociatedTokenAddress(mintPubkey, publicKey);
+      const accountInfo = await connection.getAccountInfo(tokenAccountAddress);
 
-      balance =
-        account.value.length > 0
-          ? ACCOUNT_LAYOUT.decode(account.value[0].account.data).amount
-          : 0;
+      // check if account not associated with this return 0 balance 
+      if (!accountInfo) {
+        return successResponse({
+           balance: "0",
+        });
+      }
 
-      return successResponse({
-        balance: balance / solanaWeb3.LAMPORTS_PER_SOL,
-      });
+      const rawBalance = await connection.getTokenAccountBalance(tokenAccountAddress);
+      balance = rawBalance.value.uiAmount;
+    } else {
+      const rawBalance = await connection.getBalance(publicKey);
+      balance = formatAmount(rawBalance.toString(), 9);
     }
 
-    const publicKey = new solanaWeb3.PublicKey(args.address);
-    balance = await connection.getBalance(publicKey);
-
-    return successResponse({
-      balance: balance / solanaWeb3.LAMPORTS_PER_SOL,
-    });
+    return successResponse({ balance });
   } catch (error) {
     throw error;
   }
@@ -228,7 +226,6 @@ const transfer = async (args: TransferPayload): Promise<IResponse> => {
     throw error;
   }
 };
-
 
 const getTransaction = async (
   args: GetTransactionPayload

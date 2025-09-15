@@ -125,7 +125,7 @@ export const parseAmount = (amount: string | number, decimals: number): bigint =
 
 /**
  * Convert raw amount → human-readable string by decimals
- * contoh: 100000n USDC (decimals 6) => "0.1"
+ * ex: 100000n USDC (decimals 6) => "0.1"
  */
 export const formatAmount = (raw: bigint | string, decimals: number): string => {
   const bn = new BigNumber(raw.toString());
