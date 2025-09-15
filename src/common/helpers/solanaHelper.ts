@@ -217,8 +217,6 @@ const transfer = async (args: TransferPayload): Promise<IResponse> => {
       commitment: 'confirmed',
     });
 
-    console.log(tx);
-
     return successResponse({
       ...tx
     });
