@@ -114,8 +114,8 @@ export const toBase64 = (input: Uint8Array): string => {
 };
 
 /**
- * Convert human-readable amount → raw integer (BigInt) sesuai decimals
- * contoh: 0.1 USDC (decimals 6) => 100000n
+ * Convert human-readable amount → raw integer (BigInt) by decimals
+ * ex: 0.1 USDC (decimals 6) => 100000n
  */
 export const parseAmount = (amount: string | number, decimals: number): bigint => {
   const bn = new BigNumber(amount);
@@ -124,7 +124,7 @@ export const parseAmount = (amount: string | number, decimals: number): bigint =
 };
 
 /**
- * Convert raw amount → human-readable string sesuai decimals
+ * Convert raw amount → human-readable string by decimals
  * contoh: 100000n USDC (decimals 6) => "0.1"
  */
 export const formatAmount = (raw: bigint | string, decimals: number): string => {
